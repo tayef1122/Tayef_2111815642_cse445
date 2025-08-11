@@ -1,1 +1,41 @@
+# PROJECT 1 - PERFORMANCE GROUPS
+import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+import matplotlib.pyplot as plt
 
+# Sample data (replace with your 16 participants' data)
+data = {
+    'Participant': range(1, 17),
+    'Congruent_RT': [450, 420, 510, 480, 390, 470, 430, 500, 
+                    460, 440, 490, 410, 530, 450, 470, 420],
+    'Incongruent_RT': [620, 580, 650, 700, 590, 630, 610, 680,
+                     640, 600, 670, 580, 720, 630, 650, 590]
+}
+df = pd.DataFrame(data)
+df['Interference'] = df['Incongruent_RT'] - df['Congruent_RT']
+
+# Step 1: Group participants using K-means
+kmeans = KMeans(n_clusters=3)
+df['Group'] = kmeans.fit_predict(df[['Interference']])
+group_labels = {0: 'Low', 1: 'Medium', 2: 'High'}
+df['Performance'] = df['Group'].map(group_labels)
+
+# Visualize groups
+plt.figure(figsize=(10, 4))
+plt.scatter(df['Participant'], df['Interference'], c=df['Group'], cmap='rainbow')
+plt.title("Participant Performance Groups")
+plt.xlabel("Participant ID")
+plt.ylabel("Interference Effect (ms)")
+plt.show()
+
+# Step 2: Decision Tree analysis
+X = df[['Congruent_RT', 'Incongruent_RT']]
+y = df['Group']
+tree = DecisionTreeClassifier(max_depth=2)
+tree.fit(X, y)
+
+plt.figure(figsize=(12, 6))
+plot_tree(tree, feature_names=['Congruent RT', 'Incongruent RT'], 
+          class_names=list(group_labels.values()), filled=True)
+plt.show()
