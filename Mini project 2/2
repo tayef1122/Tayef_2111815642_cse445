@@ -1,1 +1,57 @@
+# ==================== PROJECT 2: MODEL COMPARISON ====================
+import pandas as pd
+import numpy as np
+from sklearn.neural_network import MLPClassifier
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix
+import matplotlib.pyplot as plt
 
+# 1. DATA PREPARATION (16 participants)
+data = {
+    'Participant': range(1, 17),
+    'Congruent_RT': [450, 420, 510, 480, 390, 470, 430, 500, 
+                    460, 440, 490, 410, 530, 450, 470, 420],
+    'Incongruent_RT': [620, 580, 650, 700, 590, 630, 610, 680,
+                      640, 600, 670, 580, 720, 630, 650, 590]
+}
+df = pd.DataFrame(data)
+df['Interference'] = df['Incongruent_RT'] - df['Congruent_RT']
+
+# 2. LABELING (High/Low Interference)
+df['High_Interference'] = (df['Interference'] > df['Interference'].median()).astype(int)
+
+# 3. MODEL TRAINING
+X = df[['Congruent_RT', 'Incongruent_RT']]
+y = df['High_Interference']
+
+models = {
+    "Neural Network": MLPClassifier(hidden_layer_sizes=(100,), max_iter=1000, random_state=42),
+    "Random Forest": RandomForestClassifier(random_state=42),
+    "XGBoost": XGBClassifier(random_state=42)
+}
+
+# 4. RESULTS
+print("=== MODEL PERFORMANCE ===")
+for name, model in models.items():
+    model.fit(X, y)
+    y_pred = model.predict(X)
+    acc = accuracy_score(y, y_pred)
+    cm = confusion_matrix(y, y_pred)
+    
+    print(f"\n{name}:")
+    print(f"Accuracy: {acc:.1%}")
+    print("Confusion Matrix:")
+    print(cm)
+    
+    # Feature importance (for tree-based models)
+    if hasattr(model, 'feature_importances_'):
+        plt.figure(figsize=(6, 3))
+        plt.bar(X.columns, model.feature_importances_)
+        plt.title(f"{name} Feature Importance")
+        plt.show()
+
+# 5. STATISTICAL SUMMARY
+print("\n=== STATISTICAL SUMMARY ===")
+print(f"Median Interference Effect: {df['Interference'].median():.1f} ms")
+print(f"High Interference Cases: {sum(df['High_Interference'])}/16 participants")
