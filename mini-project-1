@@ -1,41 +1,79 @@
 # PROJECT 1 - PERFORMANCE GROUPS
 import pandas as pd
+import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.tree import DecisionTreeClassifier, plot_tree
-import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
-# Sample data (replace with your 16 participants' data)
+# ======================
+# Step 1: Load Data
+# ======================
 data = {
     'Participant': range(1, 17),
     'Congruent_RT': [450, 420, 510, 480, 390, 470, 430, 500, 
-                    460, 440, 490, 410, 530, 450, 470, 420],
+                     460, 440, 490, 410, 530, 450, 470, 420],
     'Incongruent_RT': [620, 580, 650, 700, 590, 630, 610, 680,
-                     640, 600, 670, 580, 720, 630, 650, 590]
+                       640, 600, 670, 580, 720, 630, 650, 590]
 }
 df = pd.DataFrame(data)
+
+# Save dataset
+df.to_csv("participants_data.csv", index=False)
+
+# Add Interference column
 df['Interference'] = df['Incongruent_RT'] - df['Congruent_RT']
 
-# Step 1: Group participants using K-means
-kmeans = KMeans(n_clusters=3)
+# ======================
+# Step 2: KMeans Clustering
+# ======================
+kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
 df['Group'] = kmeans.fit_predict(df[['Interference']])
-group_labels = {0: 'Low', 1: 'Medium', 2: 'High'}
-df['Performance'] = df['Group'].map(group_labels)
 
-# Visualize groups
+# Relabel groups as Low, Medium, High based on mean interference
+cluster_means = df.groupby('Group')['Interference'].mean().sort_values()
+ordered_labels = {cluster: label for cluster, label in zip(cluster_means.index,
+                                                          ['Low', 'Medium', 'High'])}
+df['Performance'] = df['Group'].map(ordered_labels)
+
+# ======================
+# Step 3: Visualization of Groups
+# ======================
 plt.figure(figsize=(10, 4))
 plt.scatter(df['Participant'], df['Interference'], c=df['Group'], cmap='rainbow')
 plt.title("Participant Performance Groups")
 plt.xlabel("Participant ID")
 plt.ylabel("Interference Effect (ms)")
+plt.savefig("Data_Visualize.jpg")
 plt.show()
 
-# Step 2: Decision Tree analysis
+# ======================
+# Step 4: Decision Tree Classification
+# ======================
 X = df[['Congruent_RT', 'Incongruent_RT']]
-y = df['Group']
-tree = DecisionTreeClassifier(max_depth=2)
+y = df['Performance']
+
+tree = DecisionTreeClassifier(max_depth=2, random_state=42)
 tree.fit(X, y)
 
 plt.figure(figsize=(12, 6))
-plot_tree(tree, feature_names=['Congruent RT', 'Incongruent RT'], 
-          class_names=list(group_labels.values()), filled=True)
+plot_tree(tree,
+          feature_names=['Congruent RT', 'Incongruent RT'],
+          class_names=tree.classes_, filled=True)
 plt.show()
+
+# ======================
+# Step 5: Confusion Matrix
+# ======================
+y_pred = tree.predict(X)
+cm = confusion_matrix(y, y_pred, labels=tree.classes_)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=tree.classes_)
+disp.plot(cmap="Blues")
+plt.title("Decision Tree Confusion Matrix")
+plt.savefig("Confusion_Matrix.jpg")
+plt.show()
+
+# ======================
+# Final Output Table
+# ======================
+print("\n=== Participant Performance Groups ===")
+print(df[['Participant','Congruent_RT','Incongruent_RT','Interference','Performance']])
